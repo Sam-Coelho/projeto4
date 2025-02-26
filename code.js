@@ -56,29 +56,31 @@ function processHeartRate(value, sensorNumber) {
 }
 
 
+
 class HeartbeatMelody {
     constructor(audioContext) {
         this.audioContext = audioContext;
         this.gainNode = this.audioContext.createGain();
         this.gainNode.connect(this.audioContext.destination);
-        this.oscillator = null;
         this.isPlaying = false;
     }
 
     startMelody(getBpm1, getIntensity1, getBpm2, getIntensity2) {
+        if (this.isPlaying) return;
         this.isPlaying = true;
+
         const updateMelody = () => {
             if (!this.isPlaying) return;
-            
+
             const bpm1 = getBpm1();
             const intensity1 = getIntensity1();
             const bpm2 = getBpm2();
             const intensity2 = getIntensity2();
-            
+
             const baseFreq = 220;
             const freqVariation1 = (bpm1 % 50) + intensity1 * 2;
             const freqVariation2 = (bpm2 % 50) + intensity2 * 2;
-            
+
             const melody = [
                 baseFreq + freqVariation1,
                 baseFreq + freqVariation2,
@@ -87,25 +89,25 @@ class HeartbeatMelody {
             ];
 
             this.playNotes(melody, bpm1, bpm2);
-            setTimeout(updateMelody, 1000); // Atualiza a cada segundo
+            setTimeout(updateMelody, 1000);
         };
-        
+
         updateMelody();
     }
 
     playNotes(notes, bpm1, bpm2) {
         let time = this.audioContext.currentTime;
         const duration = (60 / ((bpm1 + bpm2) / 2)) / 2;
-        
+
         notes.forEach((freq) => {
-            this.oscillator = this.audioContext.createOscillator();
-            this.oscillator.type = 'sine';
-            this.oscillator.frequency.setValueAtTime(freq, time);
-            
-            this.oscillator.connect(this.gainNode);
-            this.oscillator.start(time);
-            this.oscillator.stop(time + duration);
-            
+            const oscillator = this.audioContext.createOscillator();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(freq, time);
+
+            oscillator.connect(this.gainNode);
+            oscillator.start(time);
+            oscillator.stop(time + duration);
+
             time += duration;
         });
     }
@@ -115,16 +117,25 @@ class HeartbeatMelody {
     }
 }
 
-const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-const melodyGenerator = new HeartbeatMelody(audioContext);
+// Inicialização do sistema de áudio
+let audioContext = null;
+let melodyGenerator = null;
 
-// Simulação de BPM e intensidade variando com o tempo
-const getBpmPerson1 = () => Math.floor(60 + Math.random() * 40);
-const getIntensityPerson1 = () => Math.floor(Math.random() * 10);
-const getBpmPerson2 = () => Math.floor(70 + Math.random() * 30);
-const getIntensityPerson2 = () => Math.floor(Math.random() * 10);
+function startMusic() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        melodyGenerator = new HeartbeatMelody(audioContext);
+    }
 
-melodyGenerator.startMelody(getBpmPerson1, getIntensityPerson1, getBpmPerson2, getIntensityPerson2);
+    const getBpmPerson1 = () => Math.floor(60 + Math.random() * 40);
+    const getIntensityPerson1 = () => Math.floor(Math.random() * 10);
+    const getBpmPerson2 = () => Math.floor(70 + Math.random() * 30);
+    const getIntensityPerson2 = () => Math.floor(Math.random() * 10);
 
-// Parar a melodia após 30 segundos
-setTimeout(() => melodyGenerator.stopMelody(), 30000);
+    melodyGenerator.startMelody(getBpmPerson1, getIntensityPerson1, getBpmPerson2, getIntensityPerson2);
+}
+
+// Parar a música após 30 segundos
+setTimeout(() => {
+    if (melodyGenerator) melodyGenerator.stopMelody();
+}, 30000);
